@@ -1,3 +1,14 @@
+/* eslint-disable react/jsx-key */
+
+/* 
+
+   Game
+   -> Board
+     -> Square
+   -> History
+   
+*/
+
 import { useState } from "react";
 
 function Square({ value, handleSquareClick }) {
@@ -11,13 +22,22 @@ function Square({ value, handleSquareClick }) {
   );
 }
 
-export default function Board({ handleSquareClick }) {
-  const [squares, setSquares] = useState(Array(9).fill(null));
-  const [xIsNext, setXIsNext] = useState(true);
+function Board({ handleSquareClick, xIsNext, squares, onPlay }) {
+  const winner = calculateWinner(squares);
+  let status;
+  if (winner) {
+    status = `Winner: ${winner}`;
+  }  
+  // else if (squares.map(i=> i !== null)) {
+  //   status = "It's a tie!";
+  // } 
+  else {
+    status = "Next Player " + (xIsNext ? "X" : "O");
+  }
 
   function handleCLick(i) {
     // console.log('c');
-    if (squares[i]) {
+    if (squares[i] || winner) {
       return;
     }
     const nextSquare = squares.slice();
@@ -26,13 +46,12 @@ export default function Board({ handleSquareClick }) {
     } else {
       nextSquare[i] = "O";
     }
-    // setSquares([...squares])
-    setSquares(nextSquare);
-    setXIsNext(!xIsNext);
+    onPlay(nextSquare);
   }
 
   return (
     <>
+      <div>{status}</div>
       <div className="flex">
         <Square value={squares[0]} handleSquareClick={() => handleCLick(0)} />
         <Square value={squares[1]} handleSquareClick={() => handleCLick(1)} />
@@ -52,15 +71,68 @@ export default function Board({ handleSquareClick }) {
   );
 }
 
-function calculateWinner(squares){
+export default function Game() {
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [xIsNext, setXIsNext] = useState(true);
+  const [currentMove, setCurrentMove] = useState(0);
+// console.log(currentMove);
+  const currentSquares = history[currentMove];
+
+  function handlePlay(nextSquares) {
+    setXIsNext(!xIsNext);
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length - 1);
+  }
+
+  function jumpTo(move) {
+    setCurrentMove(move);
+    setXIsNext(move % 2 === 0);
+  }
+
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0) {
+      description = `Go to the move # ${move}`;
+    } else {
+      description = `Go to start the game`;
+    }
+    return (
+      <li key={move} className=" bg-gray-700 text-white mb-1 p-1 rounded-sm">
+        <button onClick={() => jumpTo(move)}>{description}</button>
+      </li>
+    );
+  });
+
+  return (
+    <div className=" flex justify-center p-4">
+      <div className="mr-16">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+      </div>
+      <div>
+        <ol className=" border border-gray-400 p-1 text-lg">{moves}</ol>
+      </div>
+    </div>
+  );
+}
+
+function calculateWinner(squares) {
   const lines = [
-    [0,1,2],
-    [3,4,5],
-    [6,7,8],
-    [0,3,6],
-    [1,4,7],
-    [2,5,8],
-    [0,4,8],
-    [2,4,6],
-  ]
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b, c] = lines[i];
+
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return squares[a];
+    }
+  }
+  return null;
 }
